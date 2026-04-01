@@ -301,6 +301,8 @@ def batch_summary(db: Session = Depends(get_db)):
     medium_risk = [s for s in all_students_data if s["risk"]["level"] == "medium"]
     low_risk = [s for s in all_students_data if s["risk"]["level"] == "low"]
 
+
+
     return {
         "total": len(students),
         "high_risk_count": len(high_risk),
@@ -308,4 +310,36 @@ def batch_summary(db: Session = Depends(get_db)):
         "low_risk_count": len(low_risk),
         "avg_risk": round(sum(s["risk"]["score"] for s in all_students_data) / len(all_students_data), 2) if all_students_data else 0,
         "common_struggle_topics": list(set(all_topics))[-8:], # Top 8 unique recent struggles
+    }
+
+
+from fastapi import Header, HTTPException
+
+# Set a secret key for your cron job. 
+# In production, put this in your .env file!
+CRON_SECRET = os.getenv("CRON_SECRET", "my-super-secret-hackathon-key")
+
+@app.post("/cron/daily-analysis")
+def run_daily_automated_tasks(authorization: str = Header(None), db: Session = Depends(get_db)):
+    # 1. Security Check
+    if authorization != f"Bearer {CRON_SECRET}":
+        raise HTTPException(status_code=401, detail="Unauthorized cron trigger")
+
+    # 2. Your Automated Logic Goes Here
+    print("🌽 CRON TRIGGERED: Running daily system checks...")
+    
+    students = db.query(DBStudent).all()
+    high_risk_count = 0
+    
+    for s in students:
+        refs = db.query(DBReflection).filter(DBReflection.student_id == s.id).all()
+        risk = compute_risk(refs)
+        if risk["level"] == "high":
+            high_risk_count += 1
+            # You could trigger an email to the admin here, 
+            # or pre-generate the AI analysis so it loads faster on the dashboard!
+
+    return {
+        "status": "success", 
+        "message": f"Cron completed. Found {high_risk_count} high-risk students today."
     }
