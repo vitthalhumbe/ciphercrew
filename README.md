@@ -7,4 +7,4 @@ Silent Academic Dropout Crisis
 
 Yash Gajwani
 
-Vitthal Humbe
+Vitthal S. Humbe
